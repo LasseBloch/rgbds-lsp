@@ -1,5 +1,49 @@
 import { describe, it, expect } from 'vitest';
-import { stripQuotes, parseNumberLiteral, tryParseNumber, evalExpr } from '../src/utils';
+import { stripQuotes, parseNumberLiteral, tryParseNumber, evalExpr, uriToPath, pathToUri } from '../src/utils';
+
+// ---------------------------------------------------------------------------
+// uriToPath / pathToUri
+// ---------------------------------------------------------------------------
+
+describe('uriToPath', () => {
+    it('preserves the leading slash of a POSIX absolute path from a standard LSP URI', () => {
+        // A well-formed file:// URI for /home/user/project is
+        // 'file://' + '/home/user/project' -- the third slash belongs to the
+        // path itself, not the scheme delimiter. This is exactly the shape of
+        // rootUri/workspaceFolders[].uri/textDocument.uri as sent by a real
+        // LSP client, e.g. when resolving sample.asm -> utils.asm -> hw.asm
+        // includes rooted at the workspace folder.
+        //
+        // This is POSIX-specific: on Windows, a drive-letter URI
+        // (file:///C:/Users/...) has that extra slash before the drive
+        // letter -- which is *not* part of the Windows path itself
+        // (C:\Users\... has no leading separator) -- so stripping 8 chars
+        // happens to land exactly on the drive letter and is correct there.
+        // On POSIX, the root '/' IS part of the path, so stripping 8 chars
+        // eats it and leaves a relative path.
+        const uri = 'file:///home/user/project/sample.asm';
+        expect(uriToPath(uri)).toBe('/home/user/project/sample.asm');
+    });
+});
+
+describe('pathToUri', () => {
+    it('does not duplicate the leading slash when converting a POSIX absolute path', () => {
+        // Mirror image of the uriToPath bug: prefixing with 'file:///' adds
+        // a slash that's meant to separate the scheme from a Windows drive
+        // letter (which has none of its own), but on POSIX the path already
+        // supplies its own leading '/', so the result gets four slashes
+        // instead of three.
+        const filePath = '/home/user/project/sample.asm';
+        expect(pathToUri(filePath)).toBe('file:///home/user/project/sample.asm');
+    });
+});
+
+describe('uriToPath / pathToUri round trip', () => {
+    it('round-trips a real absolute path through pathToUri -> uriToPath', () => {
+        const filePath = '/home/user/project/utils.asm';
+        expect(uriToPath(pathToUri(filePath))).toBe(filePath);
+    });
+});
 
 // ---------------------------------------------------------------------------
 // stripQuotes

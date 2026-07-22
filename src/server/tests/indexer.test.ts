@@ -126,7 +126,7 @@ describe('Indexer removeFolder', () => {
         indexer.indexFile('file:///project/src/b.asm', 'LabelB:\n    ret');
         indexer.indexFile('file:///other/c.asm', 'LabelC:\n    ret');
 
-        indexer.removeFolder('project/src');
+        indexer.removeFolder('/project/src');
 
         expect(indexer.definitions.has('LabelA')).toBe(false);
         expect(indexer.definitions.has('LabelB')).toBe(false);
