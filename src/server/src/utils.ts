@@ -172,7 +172,7 @@ export function collectRgbdsFiles(rootDir: string): string[] {
                 stack.push(fullPath);
             } else if (entry.isFile()) {
                 const ext = path.extname(entry.name).toLowerCase();
-                if (ext === '.asm' || ext === '.inc') {
+                if (ext === '.asm' || ext === '.inc' || ext === '.rgbasm' || ext === '.rgbinc') {
                     result.push(fullPath);
                 }
             }

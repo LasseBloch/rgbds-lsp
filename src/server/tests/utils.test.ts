@@ -1,5 +1,6 @@
+
 import { describe, it, expect } from 'vitest';
-import { stripQuotes, parseNumberLiteral, tryParseNumber, evalExpr, uriToPath, pathToUri } from '../src/utils';
+import { stripQuotes, parseNumberLiteral, tryParseNumber, evalExpr, uriToPath, collectRgbdsFiles, pathToUri } from '../src/utils';
 
 // ---------------------------------------------------------------------------
 // uriToPath / pathToUri
@@ -199,5 +200,44 @@ describe('evalExpr', () => {
             };
             expect(evalExpr('MY_CONST + 8', [], customResolve)).toBe(50);
         });
+    });
+});
+
+// ---------------------------------------------------------------------------
+// collectRgbdsFiles
+// ---------------------------------------------------------------------------
+
+describe('collectRgbdsFiles', () => {
+    let tmpDir: string;
+
+    afterEach(() => {
+        if (tmpDir) fs.rmSync(tmpDir, { recursive: true, force: true });
+    });
+
+    it('finds .asm, .inc, .rgbasm, and .rgbinc files, ignoring others', () => {
+        tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'rgbds-lsp-test-'));
+        const names = ['main.asm', 'utils.inc', 'main.rgbasm', 'utils.rgbinc', 'readme.txt'];
+        for (const name of names) fs.writeFileSync(path.join(tmpDir, name), '');
+
+        const found = collectRgbdsFiles(tmpDir).map((f) => path.basename(f)).sort();
+        expect(found).toEqual(['main.asm', 'main.rgbasm', 'utils.inc', 'utils.rgbinc'].sort());
+    });
+
+    it('is case-insensitive on extension', () => {
+        tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'rgbds-lsp-test-'));
+        fs.writeFileSync(path.join(tmpDir, 'main.RGBASM'), '');
+        fs.writeFileSync(path.join(tmpDir, 'utils.RgbInc'), '');
+
+        const found = collectRgbdsFiles(tmpDir).map((f) => path.basename(f)).sort();
+        expect(found).toEqual(['main.RGBASM', 'utils.RgbInc'].sort());
+    });
+
+    it('recurses into subdirectories', () => {
+        tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'rgbds-lsp-test-'));
+        fs.mkdirSync(path.join(tmpDir, 'sub'));
+        fs.writeFileSync(path.join(tmpDir, 'sub', 'nested.rgbasm'), '');
+
+        const found = collectRgbdsFiles(tmpDir).map((f) => path.basename(f));
+        expect(found).toContain('nested.rgbasm');
     });
 });

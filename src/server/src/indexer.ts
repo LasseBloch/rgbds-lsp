@@ -227,7 +227,7 @@ export class Indexer {
         const t0 = Date.now();
         const files = collectRgbdsFiles(rootDir);
         const tScan = Date.now();
-        this.log(`Found ${files.length} .asm/.inc files in ${rootDir} (${tScan - t0}ms)`);
+        this.log(`Found ${files.length} .asm/.inc/.rgbasm/.rgbinc files in ${rootDir} (${tScan - t0}ms)`);
 
         // Load cache
         const cacheFile = cachePath(rootDir);

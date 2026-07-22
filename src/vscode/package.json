@@ -49,7 +49,9 @@
         ],
         "extensions": [
           ".asm",
-          ".inc"
+          ".inc",
+          ".rgbasm",
+          ".rgbinc"
         ],
         "configuration": "./language-configuration.json"
       }

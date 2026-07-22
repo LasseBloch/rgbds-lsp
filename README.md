@@ -1,6 +1,6 @@
 # rgbds-lsp
 
-Language server for [RGBDS](https://rgbds.gbdev.io/) Game Boy assembly (`.asm`, `.inc` files). Works with VS Code, Neovim, Helix, and any LSP-compatible editor.
+Language server for [RGBDS](https://rgbds.gbdev.io/) Game Boy assembly (`.asm`, `.inc`, `.rgbasm`, `.rgbinc` files). Works with VS Code, Neovim, Helix, and any LSP-compatible editor.
 
 ## Features
 
@@ -62,10 +62,10 @@ args = ["--stdio"]
 [[language]]
 name = "asm"
 language-servers = ["rgbds-lsp"]
-file-types = ["asm", "inc"]
+file-types = ["asm", "inc", "rgbasm", "rgbinc"]
 ```
 
-**Other editors** — run `rgbds-language-server --stdio` and configure for `*.asm`/`*.inc` files. The server needs a workspace folder for cross-file features.
+**Other editors** — run `rgbds-language-server --stdio` and configure for `*.asm`/`*.inc`/`*.rgbasm`/`*.rgbinc` files. The server needs a workspace folder for cross-file features.
 
 ## Project Structure
 

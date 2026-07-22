@@ -134,7 +134,7 @@ function getIncludeCompletions(docUri: string, lineText: string, col: number): C
                 });
             } else if (entry.isFile()) {
                 const ext = path.extname(entry.name).toLowerCase();
-                if (['.asm', '.inc', '.bin', '.2bpp', '.1bpp', '.tilemap'].includes(ext)) {
+                if (['.asm', '.inc', '.rgbasm', '.rgbinc', '.bin', '.2bpp', '.1bpp', '.tilemap'].includes(ext)) {
                     items.push({
                         label: entry.name,
                         kind: CompletionItemKind.File,
