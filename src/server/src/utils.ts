@@ -4,19 +4,17 @@ import { fileURLToPath, pathToFileURL } from 'url';
 import Parser from 'tree-sitter';
 
 export function uriToPath(uri: string): string {
-    if (uri.startsWith('file://')) {
-        try {
-            return fileURLToPath(uri);
-        } catch {
-            return uri;
-        }
+    try {
+        return fileURLToPath(uri);
+    } catch {
+        return uri;
     }
-    return uri;
 }
 
 export function pathToUri(filePath: string): string {
     if (!filePath) return '';
     if (filePath.startsWith('file://')) return filePath;
+    if (!path.isAbsolute(filePath)) return filePath;
     return pathToFileURL(filePath).toString();
 }
 
