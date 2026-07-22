@@ -1,14 +1,15 @@
 import * as path from 'path';
 import * as fs from 'fs';
+import { fileURLToPath, pathToFileURL } from 'url';
 import Parser from 'tree-sitter';
 
 export function uriToPath(uri: string): string {
-    if (uri.startsWith('file:///')) {
-        let p = decodeURIComponent(uri.substring(8));
-        if (path.sep === '\\') {
-            p = p.replace(/\//g, '\\');
+    if (uri.startsWith('file://')) {
+        try {
+            return fileURLToPath(uri);
+        } catch {
+            return uri;
         }
-        return p;
     }
     return uri;
 }
@@ -16,7 +17,7 @@ export function uriToPath(uri: string): string {
 export function pathToUri(filePath: string): string {
     if (!filePath) return '';
     if (filePath.startsWith('file://')) return filePath;
-    return 'file:///' + filePath.replace(/\\/g, '/');
+    return pathToFileURL(filePath).toString();
 }
 
 export function getNodeAtPosition(tree: Parser.Tree, line: number, col: number): Parser.SyntaxNode {
