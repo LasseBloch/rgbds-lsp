@@ -8,8 +8,32 @@ import * as crypto from 'crypto';
 // Load tree-sitter-rgbds grammar
 const rgbdsLanguage = require('@retro-dev/tree-sitter-rgbds');
 
-const CACHE_VERSION = 2;
+const CACHE_VERSION = 3;
 const CACHE_DIR = path.join(require('os').homedir(), '.rgbds-lsp', 'cache');
+
+// Addressing-mode spellings the grammar has no dedicated token for, so they fall
+// through to the generic expression alternative in memory_operand and the register
+// name parses as a symbol_reference. [HLI]/[HLD] are the canonical RGBDS spellings
+// ([HL+]/[HL-] are the alternates); [$FF00+C] is the documented alternate for the
+// [C] addressing of LDH. Matched textually, same as instruction-matcher.ts.
+const ALIAS_MEMORY_OPERANDS = new Set(['[hli]', '[hld]', '[$ff00+c]']);
+
+// Node types that only wrap an expression without changing what it addresses.
+const EXPRESSION_WRAPPERS = new Set([
+    'expression', 'binary_expression', 'unary_expression', 'parenthesized_expression',
+]);
+
+// True when the node sits (through expression wrappers only) inside a memory_operand
+// whose text is one of the alias spellings above.
+function inAliasMemoryOperand(node: Parser.SyntaxNode): boolean {
+    for (let cur = node.parent; cur; cur = cur.parent) {
+        if (cur.type === 'memory_operand') {
+            return ALIAS_MEMORY_OPERANDS.has(cur.text.replace(/\s+/g, '').toLowerCase());
+        }
+        if (!EXPRESSION_WRAPPERS.has(cur.type)) return false;
+    }
+    return false;
+}
 
 interface CacheEntry {
     hash: string;
@@ -768,6 +792,9 @@ export class Indexer {
     }
 
     private extractSymbolRef(uri: string, node: Parser.SyntaxNode, currentGlobal: string): void {
+        // Register names inside [hli] / [hld] / [$ff00+c] are addressing modes, not symbols
+        if (inAliasMemoryOperand(node)) return;
+
         // symbol_reference can be: identifier, local_identifier, identifier+local_identifier, or anonymous ref
         const children = node.children;
 

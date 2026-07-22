@@ -41,14 +41,18 @@ function classifyOperand(op: Parser.SyntaxNode): string {
     if (child.type === 'sp_offset') return 'sp+e8';
     if (child.type === 'condition') return 'cc';
     if (child.type === 'memory_operand') {
-        // [hl], [hl+], [hl-], [bc], [de], [c], [n16]
+        // [hl], [hli], [hld], [bc], [de], [c], [n16]
         const inner = child.children.find(c => c.type !== '[' && c.type !== ']' && c.text !== '[' && c.text !== ']');
         if (!inner) return '[n16]';
-        const txt = child.text.toLowerCase();
+        const txt = child.text.replace(/\s+/g, '').toLowerCase();
         if (txt === '[hl]') return '[hl]';
-        if (txt === '[hl+]' || txt === '[hli]') return '[hl+]';
-        if (txt === '[hl-]' || txt === '[hld]') return '[hl-]';
+        // [hli]/[hld] are the canonical RGBDS spellings; [hl+]/[hl-] are the alternates
+        if (txt === '[hl+]' || txt === '[hli]') return '[hli]';
+        if (txt === '[hl-]' || txt === '[hld]') return '[hld]';
         if (txt === '[c]') return '[c]';
+        // [$ff00+c] addresses the same byte as [c], but stays a distinct pattern:
+        // `ld [c], a` was removed in RGBDS 1.0.0, so it must match only the ld forms
+        if (txt === '[$ff00+c]') return '[$ff00+c]';
         if (inner.type === 'register') {
             const reg = inner.text.toLowerCase();
             if (REGISTERS_16.has(reg)) return `[${reg === 'hl' ? 'hl' : 'r16'}]`;

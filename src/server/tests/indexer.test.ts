@@ -126,7 +126,7 @@ describe('Indexer removeFolder', () => {
         indexer.indexFile('file:///project/src/b.asm', 'LabelB:\n    ret');
         indexer.indexFile('file:///other/c.asm', 'LabelC:\n    ret');
 
-        indexer.removeFolder('project/src');
+        indexer.removeFolder('/project/src');
 
         expect(indexer.definitions.has('LabelA')).toBe(false);
         expect(indexer.definitions.has('LabelB')).toBe(false);
@@ -167,5 +167,48 @@ describe('Indexer local label scoping', () => {
 
         expect(indexer.definitions.has('GlobalA.local')).toBe(true);
         expect(indexer.definitions.has('GlobalB.local')).toBe(true);
+    });
+});
+
+// ---------------------------------------------------------------------------
+// Alternate addressing-mode spellings
+// ---------------------------------------------------------------------------
+
+describe('Indexer alternate addressing-mode spellings', () => {
+    const aliasLines = [
+        'ld [hli], a',
+        'ld [hld], a',
+        'ld a, [hli]',
+        'ld a, [hld]',
+        'ld [$ff00+c], a',
+        'ld a, [$ff00+c]',
+        'ld [$FF00+C], a',
+        'ld a, [$FF00 + C]',
+    ];
+
+    for (const line of aliasLines) {
+        it(`does not index a symbol reference for "${line}"`, () => {
+            const indexer = new Indexer();
+            indexer.indexFile('file:///test.asm', line + '\n');
+
+            expect(indexer.references.get('hli')).toBeUndefined();
+            expect(indexer.references.get('hld')).toBeUndefined();
+            expect(indexer.references.get('c')).toBeUndefined();
+            expect(indexer.references.get('C')).toBeUndefined();
+        });
+    }
+
+    it('still indexes genuine symbols in similar-looking expressions', () => {
+        const indexer = new Indexer();
+        indexer.indexFile('file:///test.asm', 'ld a, [foo+c]\n');
+
+        expect(indexer.references.get('foo')).toBeDefined();
+    });
+
+    it('still indexes genuine symbols in other memory operands', () => {
+        const indexer = new Indexer();
+        indexer.indexFile('file:///test.asm', 'ld a, [hliCounter]\n');
+
+        expect(indexer.references.get('hliCounter')).toBeDefined();
     });
 });
