@@ -341,7 +341,7 @@ export async function activate(context: vscode.ExtensionContext) {
         outputChannel,
         synchronize: {
             fileEvents: [
-                vscode.workspace.createFileSystemWatcher('**/*.{asm,inc}'),
+                vscode.workspace.createFileSystemWatcher('**/*.{asm,inc,rgbasm,rgbinc}'),
                 vscode.workspace.createFileSystemWatcher('**/*.{gb,gbc,sym}'),
             ],
         },
