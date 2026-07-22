@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { LspTestClient } from './lsp-client';
+import { SM83_INSTRUCTIONS } from '../src/instructions';
 import * as path from 'path';
 import * as fs from 'fs';
 
@@ -215,6 +216,108 @@ describe('LSP integration', () => {
             expect(result).not.toBeNull();
             expect(result.signatures.length).toBeGreaterThan(0);
             expect(result.signatures[0].label).toContain('MyTestMacro');
+        });
+    });
+
+    describe('alternate addressing-mode spellings', () => {
+        const lines = [
+            '    ld [hli], a',
+            '    ld [hld], a',
+            '    ld a, [hli]',
+            '    ld a, [hld]',
+            '    ld [$ff00+c], a',
+            '    ld a, [$ff00+c]',
+            '    ld [$FF00+C], a',
+            '    ld a, [$FF00 + C]',
+            '    ld [hl+], a',
+            '    ldi [hl], a',
+            '    ldd a, [hl]',
+        ];
+        const testUri = fileUri('addr_modes.asm');
+
+        beforeAll(async () => {
+            client.openDocument(testUri, ['SECTION "AddrModes", ROM0', ...lines].join('\n'));
+            await new Promise(r => setTimeout(r, 300));
+        });
+
+        it('should not report undefined symbols for register aliases', async () => {
+            const diags = await client.diagnostics(testUri) as any[];
+            const undefinedDiags = diags.filter(d => d.message.includes('Undefined symbol'));
+            expect(undefinedDiags).toEqual([]);
+        });
+
+        it('should still report genuinely undefined symbols in similar expressions', async () => {
+            const badUri = fileUri('addr_modes_bad.asm');
+            client.openDocument(badUri, [
+                'SECTION "AddrModesBad", ROM0',
+                '    ld a, [NotDefinedAnywhere+c]',
+            ].join('\n'));
+
+            const diags = await client.diagnostics(badUri) as any[];
+            const undefinedDiags = diags.filter(d => d.message.includes('Undefined symbol'));
+            expect(undefinedDiags.some(d => d.message.includes('NotDefinedAnywhere'))).toBe(true);
+        });
+
+        it('should hover the specific form for "ld [$ff00+c], a"', async () => {
+            // "ld" mnemonic on the "ld [$ff00+c], a" line (line 5, col 4)
+            const result = await client.hover(testUri, 5, 4) as any;
+            expect(result).not.toBeNull();
+            expect(result.contents.value).toContain('ld [$ff00+c], a');
+            expect(result.contents.value).toContain('$FF00+C');
+            expect(result.contents.value).toContain('1 byte · 8 cycles');
+        });
+
+        it('should hover the specific form for "ld a, [$ff00+c]"', async () => {
+            // "ld" mnemonic on the "ld a, [$ff00+c]" line (line 6, col 4)
+            const result = await client.hover(testUri, 6, 4) as any;
+            expect(result).not.toBeNull();
+            expect(result.contents.value).toContain('ld a, [$ff00+c]');
+            expect(result.contents.value).toContain('$FF00+C');
+            expect(result.contents.value).toContain('1 byte · 8 cycles');
+        });
+
+        it('should not offer the removed "ld [c], a" syntax in the instruction table', () => {
+            // LD [C],A / LD A,[C] were deprecated in RGBDS 0.9.0 and removed in 1.0.0
+            const bad = SM83_INSTRUCTIONS.filter(
+                i => i.mnemonic === 'ld' && /\[\s*c\s*\]/.test(i.label)
+            );
+            expect(bad).toEqual([]);
+        });
+
+        it('should hover the canonical ld [hli], a form for "ld [hli], a"', async () => {
+            // "ld" mnemonic on the "ld [hli], a" line (line 1, col 4)
+            const result = await client.hover(testUri, 1, 4) as any;
+            expect(result).not.toBeNull();
+            expect(result.contents.value).toContain('ld [hli], a');
+        });
+
+        it('should hover the canonical ld [hli], a form for the "ld [hl+], a" alternate', async () => {
+            // "ld" mnemonic on the "ld [hl+], a" line (line 9, col 4)
+            const result = await client.hover(testUri, 9, 4) as any;
+            expect(result).not.toBeNull();
+            expect(result.contents.value).toContain('ld [hli], a');
+        });
+
+        it('should hover the ldi [hl], a form', async () => {
+            // "ldi" mnemonic on line 10, col 4
+            const result = await client.hover(testUri, 10, 4) as any;
+            expect(result).not.toBeNull();
+            expect(result.contents.value).toContain('ldi [hl], a');
+            expect(result.contents.value).toContain('1 byte · 8 cycles');
+        });
+
+        it('should hover the ldd a, [hl] form', async () => {
+            // "ldd" mnemonic on line 11, col 4
+            const result = await client.hover(testUri, 11, 4) as any;
+            expect(result).not.toBeNull();
+            expect(result.contents.value).toContain('ldd a, [hl]');
+            expect(result.contents.value).toContain('1 byte · 8 cycles');
+        });
+
+        it('should use the canonical [hli]/[hld] spelling in the instruction table', () => {
+            // RGBDS documents LD [HLI],A as canonical; [HL+]/[HL-] are the alternates
+            const alternates = SM83_INSTRUCTIONS.filter(i => /\[hl[+-]\]/.test(i.label));
+            expect(alternates).toEqual([]);
         });
     });
 
